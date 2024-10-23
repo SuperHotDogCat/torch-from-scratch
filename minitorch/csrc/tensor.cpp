@@ -1,22 +1,14 @@
 // Torchは内部でC/C++コードが動いている。
 // このソースコードはTensorの定義とTensorの処理を書く
-
+#include "tensor.h"
+#include "cpu.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
-typedef struct {
-    float *data; // 32 bit data
-    int *strides;
-    int *shape;
-    int ndim; // 次元数
-    int size; // 全サイズ
-    char *device;
-} Tensor;
-
-void norch_error(char *err, ...){
+void norch_error(const char *err, ...){
     // fprintfのように任意引数を受取errorを吐く
     va_list args;
     va_start(args, err);
@@ -86,10 +78,10 @@ Tensor *add_tensor(Tensor *tensor1, Tensor *tensor2){
     }
     add_tensor_cpu(tensor1, tensor2, result_data);
 
-    return create_tensor(result_data, shape, ndim,);
+    return create_tensor(result_data, shape, ndim);
 }
 
-Tensor* reshape_tensor(Tensor* tensor, int* new_shape, int new_ndim) {
+Tensor* reshape_tensor(Tensor* tensor, int* new_shape, int new_ndim){
 
     int ndim = new_ndim;
     int* shape = (int*)malloc(ndim * sizeof(int));
@@ -117,5 +109,5 @@ Tensor* reshape_tensor(Tensor* tensor, int* new_shape, int new_ndim) {
         norch_error("Memory allocation failed\n");
     }
     assign_tensor_cpu(tensor, result_data);
-    return create_tensor(result_data, shape,);
+    return create_tensor(result_data, shape, ndim);
 }
