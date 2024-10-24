@@ -7,4 +7,5 @@
 
 *.so
 *.out
+*.o
 __pycache__
