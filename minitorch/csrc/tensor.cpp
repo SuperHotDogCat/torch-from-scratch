@@ -185,6 +185,8 @@ Tensor* reshape_tensor(Tensor* tensor, int* new_shape, int new_ndim){
 }
 
 void to_device(Tensor *tensor, char *target_device){
+    // 少し怪しいかもしれない、tensor->deviceがdpuになるときがなぜかある
+    // for debug: printf("tensor->device: %s target_device: %s\n", tensor->device, target_device);
     if ((strcmp(target_device, "cuda") == 0) && (strcmp(tensor->device, "cuda") != 0)){
         cpu_to_cuda(tensor);
     } else if ((strcmp(target_device, "cpu") == 0) && (strcmp(tensor->device, "cpu") != 0)){
