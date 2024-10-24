@@ -21,6 +21,7 @@ class CTensor(ctypes.Structure):
         ("shape", ctypes.POINTER(ctypes.c_int)),
         ("ndim", ctypes.c_int),
         ("size", ctypes.c_int),
+        ("device", ctypes.c_char_p)
     ]
 
 class Tensor:
@@ -33,25 +34,27 @@ class Tensor:
             self.data_ctype = (ctypes.c_float * len(data))(*data)
             self.shape_ctype = (ctypes.c_int * len(shape))(*shape)
             self.ndim_ctype = ctypes.c_int(len(shape))
+            self.device_ctype = device.encode('utf-8')
 
-            self.shape = shape
+            self.shape = shape.copy()
             self.ndim = len(shape)
+            self.device = device
 
-            Tensor._C.create_tensor.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_int), ctypes.c_int]
+            Tensor._C.create_tensor.argtypes = [ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_int), ctypes.c_int, ctypes.c_char_p]
             Tensor._C.create_tensor.restype = ctypes.POINTER(CTensor)
 
             self.tensor = Tensor._C.create_tensor(
                 self.data_ctype,
                 self.shape_ctype,
                 self.ndim_ctype,
+                self.device_ctype
             )
             self.device = device
-        
         else:
             self.tensor = None
             self.shape = None
             self.ndim = None
-            self.device = None
+            self.device = device
         
     def flatten(self, nested_list):
         r"""
@@ -138,6 +141,39 @@ class Tensor:
         result_data.device = self.device
 
         return result_data
+    
+    def __sub__(self, other):
+        """
+        sub tensors
+        result = tensor1 - tensor2
+        """
+  
+        if self.shape != other.shape:
+            raise ValueError("Tensors must have the same shape for substraction")
+    
+        Tensor._C.sub_tensor.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+        Tensor._C.sub_tensor.restype = ctypes.POINTER(CTensor)
+
+        result_tensor_ptr = Tensor._C.sub_tensor(self.tensor, other.tensor)
+
+        result_data = Tensor()
+        result_data.tensor = result_tensor_ptr
+        result_data.shape = self.shape.copy()
+        result_data.ndim = self.ndim
+        result_data.device = self.device
+
+        return result_data
+    
+    def to(self, device):
+        device = str(device)
+        self.device = device
+        self.device_ctype = self.device.encode('utf-8')
+  
+        Tensor._C.to_device.argtypes = [ctypes.POINTER(CTensor), ctypes.c_char_p]
+        Tensor._C.to_device.restype = None
+        Tensor._C.to_device(self.tensor, self.device_ctype)
+  
+        return self
 
 # Include the other operations:
 # __str__
@@ -148,4 +184,3 @@ class Tensor:
 # __truediv__ (/)
 # log
 # ...
-

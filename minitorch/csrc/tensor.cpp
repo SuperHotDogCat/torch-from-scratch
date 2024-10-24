@@ -2,6 +2,8 @@
 // このソースコードはTensorの定義とTensorの処理を書く
 #include "tensor.h"
 #include "cpu.h"
+#include <cuda_runtime_api.h> // これをいれないと.cuhのコンパイルで躓くことになる
+#include "cuda.cuh"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -17,7 +19,7 @@ void norch_error(const char *err, ...){
     exit(1);
 }
 
-Tensor *create_tensor(float *data, int *shape, int ndim){
+Tensor *create_tensor(float *data, int *shape, int ndim, char *device){
     Tensor *tensor = (Tensor *)malloc(sizeof(Tensor));
     if (tensor == NULL){
         norch_error("Memory allocation failed\n");
@@ -26,6 +28,7 @@ Tensor *create_tensor(float *data, int *shape, int ndim){
     tensor->data = data;
     tensor->shape = shape;
     tensor->ndim = ndim;
+    tensor->device = device;
 
     tensor->size = 1;
     for (int i = 0; i < ndim; i++){
@@ -60,6 +63,17 @@ Tensor *add_tensor(Tensor *tensor1, Tensor *tensor2){
     if (tensor1->ndim != tensor2->ndim){
         norch_error("Tensors must have the same number of dimensions %d and %d for addition\n", tensor1->ndim, tensor2->ndim);
     }
+    if (strcmp(tensor1->device, tensor2->device) != 0){
+        norch_error("Tensors must be on the same device: %s and %s\n", tensor1->device, tensor2->device);
+    }
+    // add した結果の計算結果を置くデバイスに関する情報も保持する
+    char* device = (char*)malloc(strlen(tensor1->device) + 1);
+    if (device != NULL) {
+        strcpy(device, tensor1->device);
+    } else {
+        norch_error("Memory allocation failed\n");
+    }
+
     int ndim = tensor1->ndim;
     int *shape = (int *)malloc(ndim * sizeof(int));
     if (shape == NULL) {
@@ -70,15 +84,65 @@ Tensor *add_tensor(Tensor *tensor1, Tensor *tensor2){
             norch_error("Tensors must have the same shape %d and %d at index %d for addition\n", tensor1->shape[i], tensor2->shape[i], i);
         }
         shape[i] = tensor1->shape[i];
-    }      
-    int size = tensor1->size;
-    float *result_data = (float *)malloc(size * sizeof(float));
-    if (result_data == NULL) {
+    }
+
+    if (strcmp("cuda", tensor1->device) == 0){
+        // on cuda
+        float *result_data;
+        cudaMalloc((void **)&result_data, sizeof(float) * tensor1->size);
+        add_tensor_cuda(tensor1, tensor2, result_data);
+        return create_tensor(result_data, shape, ndim, device);
+    } else {
+        float *result_data = (float *)malloc(tensor1->size * sizeof(float));
+        if (result_data == NULL) {
+            norch_error("Memory allocation failed\n");
+        }
+        add_tensor_cpu(tensor1, tensor2, result_data);
+        return create_tensor(result_data, shape, ndim, device);
+    }
+}
+
+Tensor *sub_tensor(Tensor *tensor1, Tensor *tensor2){
+    if (tensor1->ndim != tensor2->ndim){
+        norch_error("Tensors must have the same number of dimensions %d and %d for addition\n", tensor1->ndim, tensor2->ndim);
+    }
+    if (strcmp(tensor1->device, tensor2->device) != 0){
+        norch_error("Tensors must be on the same device: %s and %s\n", tensor1->device, tensor2->device);
+    }
+    // sub した結果の計算結果を置くデバイスに関する情報も保持する
+    char* device = (char*)malloc(strlen(tensor1->device) + 1);
+    if (device != NULL) {
+        strcpy(device, tensor1->device);
+    } else {
         norch_error("Memory allocation failed\n");
     }
-    add_tensor_cpu(tensor1, tensor2, result_data);
 
-    return create_tensor(result_data, shape, ndim);
+    int ndim = tensor1->ndim;
+    int *shape = (int *)malloc(ndim * sizeof(int));
+    if (shape == NULL) {
+        norch_error("Memory allocation failed\n");
+    }
+    for (int i = 0; i < ndim; i++) {
+        if (tensor1->shape[i] != tensor2->shape[i]) {
+            norch_error("Tensors must have the same shape %d and %d at index %d for addition\n", tensor1->shape[i], tensor2->shape[i], i);
+        }
+        shape[i] = tensor1->shape[i];
+    }
+
+    if (strcmp("cuda", tensor1->device) == 0){
+        // on cuda
+        float *result_data;
+        cudaMalloc((void **)&result_data, sizeof(float) * tensor1->size);
+        sub_tensor_cuda(tensor1, tensor2, result_data);
+        return create_tensor(result_data, shape, ndim, device);
+    } else {
+        float *result_data = (float *)malloc(tensor1->size * sizeof(float));
+        if (result_data == NULL) {
+            norch_error("Memory allocation failed\n");
+        }
+        sub_tensor_cpu(tensor1, tensor2, result_data);
+        return create_tensor(result_data, shape, ndim, device);
+    }
 }
 
 Tensor* reshape_tensor(Tensor* tensor, int* new_shape, int new_ndim){
@@ -108,6 +172,22 @@ Tensor* reshape_tensor(Tensor* tensor, int* new_shape, int new_ndim){
     if (result_data == NULL) {
         norch_error("Memory allocation failed\n");
     }
+
     assign_tensor_cpu(tensor, result_data);
-    return create_tensor(result_data, shape, ndim);
+    char* device = (char*)malloc(strlen(tensor->device) + 1);
+    if (device != NULL) {
+        strcpy(device, tensor->device);
+    } else {
+        norch_error("Memory allocation failed\n");
+    }
+
+    return create_tensor(result_data, shape, ndim, device); // 一旦cpuのまま
+}
+
+void to_device(Tensor *tensor, char *target_device){
+    if ((strcmp(target_device, "cuda") == 0) && (strcmp(tensor->device, "cuda") != 0)){
+        cpu_to_cuda(tensor);
+    } else if ((strcmp(target_device, "cpu") == 0) && (strcmp(tensor->device, "cpu") != 0)){
+        cuda_to_cpu(tensor);
+    }
 }

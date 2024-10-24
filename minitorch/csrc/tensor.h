@@ -18,10 +18,13 @@ C/C++では、関数を共有ライブラリからエクスポートするには
 */
 
 extern "C" {
-    Tensor *create_tensor(float *data, int *shape, int ndim);
+    void norch_error(const char *err, ...);
+    Tensor *create_tensor(float *data, int *shape, int ndim, char *device);
     float get_item(Tensor *tensor, int *indices);
     Tensor *add_tensor(Tensor *tensor1, Tensor *tensor2);
+    Tensor *sub_tensor(Tensor *tensor1, Tensor *tensor2);
     Tensor* reshape_tensor(Tensor* tensor, int* new_shape, int new_ndim);
+    void to_device(Tensor *tensor, char *target_device);
 }
 
 #endif
