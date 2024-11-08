@@ -171,12 +171,31 @@ class Tensor:
         """
 
         if self.shape != other.shape:
-            raise ValueError("Tensors must have the same shape for substraction")
+            raise ValueError("Tensors must have the same shape for elementwise mul")
     
         Tensor._C.elementwise_mul_tensor.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
         Tensor._C.elementwise_mul_tensor.restype = ctypes.POINTER(CTensor)
 
         result_tensor_ptr = Tensor._C.elementwise_mul_tensor(self.tensor, other.tensor)
+
+        result_data = Tensor()
+        result_data.tensor = result_tensor_ptr
+        result_data.shape = self.shape.copy()
+        result_data.ndim = self.ndim
+        result_data.device = self.device
+
+        return result_data
+    
+    def __matmul__(self, other):
+        """
+        mat mul tensors
+        result = tensor1 @ tensor2
+        """
+
+        Tensor._C.matmul_tensor.argtypes = [ctypes.POINTER(CTensor), ctypes.POINTER(CTensor)]
+        Tensor._C.matmul_tensor.restype = ctypes.POINTER(CTensor)
+
+        result_tensor_ptr = Tensor._C.matmul_tensor(self.tensor, other.tensor)
 
         result_data = Tensor()
         result_data.tensor = result_tensor_ptr

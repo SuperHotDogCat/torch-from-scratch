@@ -145,45 +145,6 @@ Tensor *sub_tensor(Tensor *tensor1, Tensor *tensor2){
     }
 }
 
-Tensor* reshape_tensor(Tensor* tensor, int* new_shape, int new_ndim){
-
-    int ndim = new_ndim;
-    int* shape = (int*)malloc(ndim * sizeof(int));
-    if (shape == NULL) {
-        minitorch_error("Memory allocation failed\n");
-    }
-
-    for (int i = 0; i < ndim; i++) {
-        shape[i] = new_shape[i];
-    }
-
-    // Calculate the total number of elements in the new shape
-    int size = 1;
-    for (int i = 0; i < new_ndim; i++) {
-        size *= shape[i];
-    }
-
-    // Check if the total number of elements matches the current tensor's size
-    if (size != tensor->size) {
-        minitorch_error("Cannot reshape tensor. Total number of elements in new shape does not match the current size of the tensor.\n");
-    }
-
-    float* result_data = (float*)malloc(tensor->size * sizeof(float));
-    if (result_data == NULL) {
-        minitorch_error("Memory allocation failed\n");
-    }
-
-    assign_tensor_cpu(tensor, result_data);
-    char* device = (char*)malloc(strlen(tensor->device) + 1);
-    if (device != NULL) {
-        strcpy(device, tensor->device);
-    } else {
-        minitorch_error("Memory allocation failed\n");
-    }
-
-    return create_tensor(result_data, shape, ndim, device); // 一旦cpuのまま
-}
-
 Tensor *elementwise_mul_tensor(Tensor *tensor1, Tensor *tensor2){
     if (tensor1->ndim != tensor2->ndim){
         minitorch_error("Tensors must have the same number of dimensions %d and %d for addition\n", tensor1->ndim, tensor2->ndim);
@@ -225,6 +186,86 @@ Tensor *elementwise_mul_tensor(Tensor *tensor1, Tensor *tensor2){
         elementwise_mul_tensor_cpu(tensor1, tensor2, result_data);
         return create_tensor(result_data, shape, ndim, device);
     }
+}
+
+Tensor *matmul_tensor(Tensor *tensor1, Tensor *tensor2){
+    // これ以降はひとまず2次元配列を仮定する
+    if (tensor1->shape[tensor1->ndim-1] != tensor2->shape[0]){
+        minitorch_error("This tensor size are not compatible\n");
+    }
+    if (strcmp(tensor1->device, tensor2->device) != 0){
+        minitorch_error("Tensors must be on the same device: %s and %s\n", tensor1->device, tensor2->device);
+    }
+    // sub した結果の計算結果を置くデバイスに関する情報も保持する
+    char* device = (char*)malloc(strlen(tensor1->device) + 1);
+    if (device != NULL) {
+        strcpy(device, tensor1->device);
+    } else {
+        minitorch_error("Memory allocation failed\n");
+    }
+    // これ以降はひとまず2次元配列を仮定する
+    int ndim = tensor1->ndim;
+    if (ndim != 2){
+        minitorch_error("ndim != 2 not supported");
+    }
+    int *shape = (int *)malloc(ndim * sizeof(int));
+    if (shape == NULL) {
+        minitorch_error("Memory allocation failed\n");
+    }
+    // 2次元配列を仮定
+    shape[0] = tensor1->shape[0];
+    shape[1] = tensor2->shape[tensor2->ndim-1];
+    if (strcmp("cuda", tensor1->device) == 0){
+        // on cuda
+        minitorch_error("cuda not supported\n");
+        
+    } else {
+        float *result_data = (float *)malloc(shape[0] * shape[1] * sizeof(float));
+        if (result_data == NULL) {
+            minitorch_error("Memory allocation failed\n");
+        }
+        matmul_tensor_cpu(tensor1, tensor2, result_data);
+        return create_tensor(result_data, shape, ndim, device);
+    }
+}
+
+Tensor* reshape_tensor(Tensor* tensor, int* new_shape, int new_ndim){
+
+    int ndim = new_ndim;
+    int* shape = (int*)malloc(ndim * sizeof(int));
+    if (shape == NULL) {
+        minitorch_error("Memory allocation failed\n");
+    }
+
+    for (int i = 0; i < ndim; i++) {
+        shape[i] = new_shape[i];
+    }
+
+    // Calculate the total number of elements in the new shape
+    int size = 1;
+    for (int i = 0; i < new_ndim; i++) {
+        size *= shape[i];
+    }
+
+    // Check if the total number of elements matches the current tensor's size
+    if (size != tensor->size) {
+        minitorch_error("Cannot reshape tensor. Total number of elements in new shape does not match the current size of the tensor.\n");
+    }
+
+    float* result_data = (float*)malloc(tensor->size * sizeof(float));
+    if (result_data == NULL) {
+        minitorch_error("Memory allocation failed\n");
+    }
+
+    assign_tensor_cpu(tensor, result_data);
+    char* device = (char*)malloc(strlen(tensor->device) + 1);
+    if (device != NULL) {
+        strcpy(device, tensor->device);
+    } else {
+        minitorch_error("Memory allocation failed\n");
+    }
+
+    return create_tensor(result_data, shape, ndim, device); // 一旦cpuのまま
 }
 
 void to_device(Tensor *tensor, char *target_device){

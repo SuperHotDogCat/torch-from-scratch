@@ -1,7 +1,12 @@
 import minitorch
 print("Initialization Start")
-tensor1 = minitorch.Tensor([[1, 2, 3], [3, 2, 1]])
-tensor2 = minitorch.Tensor([[3, 2, 1], [1, 2, 3]])
+tensor1 = minitorch.Tensor([[1, 2, 3], 
+                            [3, 2, 1]])
+tensor2 = minitorch.Tensor([[3, 2, 1], 
+                            [1, 2, 3]])
+for_matmul = minitorch.Tensor([[1,2],
+                            [2,1],
+                            [3,1]])
 print("Initialization OK")
 
 print("Addition Start")
@@ -21,6 +26,23 @@ print("Elementwise mul Start")
 result = tensor1 * tensor2
 assert result[0,0] == 3
 print("Elementwise mul OK")
+
+print("Matmul Start")
+"""
+[1, 2, 3]   [1, 2]
+[3, 2, 1] @ [2, 1]
+            [3, 1]
+[10.0,14.0]
+[14.0,10.0]
+"""
+result = tensor1 @ for_matmul
+print(result[0,0], result[0,1])
+print(result[1,0], result[1,1])
+print("Matmul OK")
+assert result[0,0] == 14
+assert result[0,1] == 7
+assert result[1,0] == 10
+assert result[1,1] == 9
 
 print("Device on Start")
 tensor3 = tensor1.to("cuda")

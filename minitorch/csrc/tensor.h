@@ -24,7 +24,8 @@ extern "C" {
     Tensor *add_tensor(Tensor *tensor1, Tensor *tensor2);
     Tensor *sub_tensor(Tensor *tensor1, Tensor *tensor2);
     Tensor *elementwise_mul_tensor(Tensor *tensor1, Tensor *tensor2);
-    Tensor* reshape_tensor(Tensor* tensor, int* new_shape, int new_ndim);
+    Tensor *matmul_tensor(Tensor *tensor1, Tensor *tensor2);
+    Tensor *reshape_tensor(Tensor* tensor, int* new_shape, int new_ndim);
     void to_device(Tensor *tensor, char *target_device);
 }
 
