@@ -17,6 +17,11 @@ assert result[1,1] == 0
 print("Subtraction OK")
 # 0
 
+print("Elementwise mul Start")
+result = tensor1 * tensor2
+assert result[0,0] == 3
+print("Elementwise mul OK")
+
 print("Device on Start")
 tensor3 = tensor1.to("cuda")
 print("Device on OK")
@@ -24,8 +29,18 @@ print("Device on OK")
 print("Addition on device Start")
 tensor4 = tensor2.to("cuda")
 result = tensor3 + tensor4
+result = result.to("cpu")
+assert result[1,1] == 4
 print("Addition on device OK")
 
 print("Subtraction on device Start")
 result = tensor3 - tensor4
+result = result.to("cpu")
+assert result[1,1] == 0
 print("Subtraction on device OK")
+
+print("Elementwise mul on device Start")
+result = tensor1 * tensor2
+result = result.to("cpu")
+assert result[0,0] == 3
+print("Elementwise mul on device OK")

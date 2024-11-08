@@ -4,7 +4,7 @@ NVCC = nvcc
 
 # Compiler flags
 CXXFLAGS = -fPIC
-NVCCFLAGS = -Xcompiler -fPIC
+NVCCFLAGS = -Xcompiler -fPIC -arch sm_89
 
 # CUDA and system include directories
 CUDA_PATH = /usr/local/cuda
